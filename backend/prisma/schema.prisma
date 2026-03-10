@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum TaskType {
+  LISTENING
+  SPEAKING
+  READING
+  WRITING
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  subdomain   String   @unique
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  tasks       Task[]
+  subscriptions Subscription[]
+}
+
+model User {
+  id              String       @id @default(uuid())
+  email           String       @unique
+  password        String
+  firstName       String?
+  lastName        String?
+  role            Role         @default(STUDENT)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  // Teacher-Student Relation
+  teacher         User?        @relation("TeacherStudents", fields: [teacherId], references: [id])
+  teacherId       String?
+  students        User[]       @relation("TeacherStudents")
+
+  attempts        Attempt[]
+  progressSummary StudentProgressSummary?
+
+  status          String       @default("ACTIVE") // ACTIVE, INACTIVE, INVITED
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([role])
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  title           String
+  description     String?      @db.Text
+  type            TaskType
+  difficulty      Difficulty   @default(INTERMEDIATE)
+  timeLimit       Int?         // in seconds
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+
+  // Module specific data
+  audioUrl        String?      // Listening
+  passage         String?      @db.Text // Reading
+  instructions    String?      @db.Text // Speaking/Writing
+  evaluationRubric Json?       // Writing/Speaking
+
+  createdByRole   Role?
+  createdById     String?
+
+  questions       Question[]
+  attempts        Attempt[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([type])
+}
+
+model Question {
+  id          String   @id @default(uuid())
+  task        Task     @relation(fields: [taskId], references: [id])
+  taskId      String
+  questionText String   @db.Text
+  options      Json?    // For MCQs: ["A", "B", "C", "D"]
+  correctAnswer String
+  type         String?
+  time         Int?     @default(20)
+  order        Int      @default(0)
+
+  @@index([taskId])
+}
+
+model Attempt {
+  id              String   @id @default(uuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  task            Task?    @relation(fields: [taskId], references: [id])
+  taskId          String?
+  
+  status          String   @default("COMPLETED") // COMPLETED, IN_PROGRESS
+  score           Float?
+  
+  // AI Results stored as JSON
+  aiResults       Json?    // { grammar: 0.8, fluency: 0.7, stt: "...", etc }
+  studentAnswers  Json?    // { "q1": "A", "q2": "B" }
+  
+  teacherFeedback String?  @db.Text
+  manualScore     Float?
+  
+  submittedAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([submittedAt])
+}
+
+model StudentProgressSummary {
+  id              String   @id @default(uuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String   @unique
+
+  listeningAvg    Float    @default(0)
+  speakingAvg     Float    @default(0)
+  readingAvg      Float    @default(0)
+  writingAvg      Float    @default(0)
+  
+  totalAttempts   Int      @default(0)
+  lastAttemptAt   DateTime?
+
+  updatedAt       DateTime @updatedAt
+}
+
+model Subscription {
+  id              String       @id @default(uuid())
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  plan            String       // FREE, BASIC, PRO, INSTITUTIONAL
+  status          String       @default("ACTIVE")
+  startDate       DateTime     @default(now())
+  endDate         DateTime?
+  
+  // Limits
+  aiLimit         Int          @default(100)
+  studentLimit    Int          @default(50)
+  storageLimit    Int          @default(1024) // in MB
+
+  @@index([organizationId])
+}

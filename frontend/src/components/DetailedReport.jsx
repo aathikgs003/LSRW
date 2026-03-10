@@ -1,95 +1,152 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import {
+  Trophy,
+  Lightbulb,
+  CheckCircle2,
+  AlertCircle,
+  BarChart3,
+  LayoutDashboard,
+  RotateCcw,
+  FileText
+} from 'lucide-react';
 
 const DetailedReport = ({ title, score, metrics, mistakes, criteria, recommendations, transcript, onRetry, onHome }) => {
   const isPass = score >= 60;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.paper}>
+    <div className="max-w-5xl mx-auto px-6 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/50 overflow-hidden border border-gray-100"
+      >
+        {/* Header Section */}
+        <div className={`p-12 text-white relative overflow-hidden ${isPass ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-rose-500 to-red-600'}`}>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center">
+            <div>
+              <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-sm font-bold mb-4">
+                <Trophy size={16} className="mr-2" />
+                Assessment Completed
+              </div>
+              <h1 className="text-5xl font-black mb-2">{title} Analysis</h1>
+              <p className="text-white/80 text-lg font-medium">Comprehensive performance breakdown</p>
+            </div>
 
-        {/* HEADER */}
-        <div style={{ ...styles.header, backgroundColor: isPass ? '#27ae60' : '#e74c3c' }}>
-          <div>
-            <h1 style={{ margin: 0, color: 'white', fontSize: '28px' }}>{title} Assessment</h1>
-            <p style={{ color: 'rgba(255,255,255,0.9)', margin: '5px 0 0 0' }}>Performance Report</p>
+            <div className="mt-8 md:mt-0 flex flex-col items-center justify-center bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-[2rem] min-w-[200px]">
+              <span className="text-6xl font-black leading-none">{score}</span>
+              <span className="text-white/60 font-bold uppercase tracking-widest text-sm mt-2">Overall Score</span>
+            </div>
           </div>
-          <div style={styles.scoreBadge}>
-            <span style={{ fontSize: '42px', fontWeight: 'bold' }}>{score}</span>
-            <span style={{ fontSize: '14px', opacity: 0.8 }}>/100</span>
-          </div>
+
+          {/* Abstract background shapes */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-black/10 rounded-full blur-2xl"></div>
         </div>
 
-        {/* METRICS */}
-        <div style={styles.gridContainer}>
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-8 bg-gray-50/50 border-b border-gray-100">
           {metrics.map((m, idx) => (
-            <div key={idx} style={styles.metricCard}>
-              <span style={styles.metricLabel}>{m.label}</span>
-              <span style={styles.metricValue}>{m.value}</span>
+            <div key={idx} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center text-center">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{m.label}</span>
+              <span className="text-2xl font-black text-gray-900">{m.value}</span>
             </div>
           ))}
         </div>
 
-        <div style={styles.contentPadding}>
+        <div className="p-12 space-y-12">
 
-          {/* TRANSCRIPT SECTION */}
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>🗣️ Your Recording Transcript</h3>
-            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '10px', border: '1px solid #e0e0e0', fontStyle: 'italic', color: '#555' }}>
-              "{transcript || <span style={{ color: '#999' }}>No speech text available.</span>}"
-            </div>
-          </div>
+          {/* Transcript Section (Optional) */}
+          {transcript && (
+            <section>
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center">
+                  <FileText size={20} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Transcription</h3>
+              </div>
+              <div className="p-8 bg-gray-50 rounded-[2rem] border border-gray-100 italic text-gray-600 leading-relaxed text-lg">
+                "{transcript}"
+              </div>
+            </section>
+          )}
 
-          {/* PLACEMENT CRITERIA */}
+          {/* Criteria Breakdown */}
           {criteria && (
-            <div style={styles.section}>
-              <h3 style={styles.sectionTitle}>📊 Criteria Breakdown</h3>
-              <div style={styles.criteriaBox}>
+            <section>
+              <div className="flex items-center space-x-3 mb-8">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <BarChart3 size={20} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Skill Breakdown</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 bg-white p-10 rounded-[2rem] border border-gray-100">
                 {Object.entries(criteria).map(([key, value]) => (
-                  <div key={key} style={{ marginBottom: '15px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '14px', fontWeight: '600', color: '#444' }}>
-                      <span>{key}</span>
-                      <span>{value}%</span>
+                  <div key={key}>
+                    <div className="flex justify-between items-end mb-3">
+                      <span className="font-bold text-gray-700">{key}</span>
+                      <span className="text-sm font-black text-gray-400">{value}%</span>
                     </div>
-                    <div style={styles.progressBarBg}>
-                      <div style={{
-                        ...styles.progressBarFill,
-                        width: `${value}%`,
-                        backgroundColor: value > 75 ? '#2ecc71' : value > 50 ? '#f1c40f' : '#e74c3c'
-                      }}></div>
+                    <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${value}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-full rounded-full ${value >= 80 ? 'bg-emerald-500' : value >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                          }`}
+                      ></motion.div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          {/* MISTAKES TABLE */}
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>📝 Correction Report</h3>
+          {/* Mistakes & Corrections */}
+          <section>
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <AlertCircle size={20} />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">Detailed Feedback</h3>
+            </div>
+
             {mistakes.length === 0 ? (
-              <div style={styles.successBox}>✨ Outstanding! No errors detected.</div>
+              <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-[2rem] flex items-center space-x-6">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-emerald-500 shadow-sm shadow-emerald-200/50">
+                  <CheckCircle2 size={32} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-emerald-900">Flawless Performance!</h4>
+                  <p className="text-emerald-700 font-medium">We couldn't find any specific areas for correction in this session.</p>
+                </div>
+              </div>
             ) : (
-              <div style={styles.tableContainer}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
-                      <th style={styles.th}>Issue Context</th>
-                      <th style={styles.th}>Your Answer / Input</th>
-                      <th style={styles.th}>Correct / Suggestion</th>
+              <div className="overflow-hidden border border-gray-100 rounded-[2rem]">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-8 py-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Analysis</th>
+                      <th className="px-8 py-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Observed</th>
+                      <th className="px-8 py-5 text-sm font-bold text-gray-500 uppercase tracking-wider">Recommended</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {mistakes.map((item, index) => (
-                      <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={styles.td}>
-                          <strong>{item.type}</strong><br />
-                          <span style={{ fontSize: '12px', color: '#777' }}>{item.question}</span>
+                      <tr key={index} className="group hover:bg-gray-50 transition-colors">
+                        <td className="px-8 py-6">
+                          <div className="font-bold text-gray-900">{item.type}</div>
+                          <div className="text-xs text-gray-400 font-medium mt-1">{item.question}</div>
                         </td>
-                        <td style={{ ...styles.td, color: '#c0392b', background: '#fff5f5', fontWeight: '500' }}>
-                          {item.userAnswer}
+                        <td className="px-8 py-6">
+                          <span className="inline-block px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-sm font-bold border border-rose-100">
+                            {item.userAnswer}
+                          </span>
                         </td>
-                        <td style={{ ...styles.td, color: '#27ae60', background: '#f0fdf4', fontWeight: 'bold' }}>
-                          {item.correctAnswer}
+                        <td className="px-8 py-6">
+                          <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-bold border border-emerald-100">
+                            {item.correctAnswer}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -97,58 +154,54 @@ const DetailedReport = ({ title, score, metrics, mistakes, criteria, recommendat
                 </table>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* RECOMMENDATIONS */}
-          <div style={styles.section}>
-            <div style={styles.recBox}>
-              <h3 style={{ margin: '0 0 15px 0', color: '#0d47a1' }}>💡 Action Plan</h3>
-              <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                {recommendations.map((rec, i) => (
-                  <li key={i} style={{ marginBottom: '8px', lineHeight: '1.6', color: '#333' }}>{rec}</li>
-                ))}
-              </ul>
+          {/* Recommendations / Action Plan */}
+          <section>
+            <div className="bg-indigo-900 p-10 rounded-[2.5rem] text-white overflow-hidden relative shadow-xl shadow-indigo-900/20">
+              <div className="relative z-10">
+                <div className="flex items-center space-x-3 mb-8">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center backdrop-blur-md">
+                    <Lightbulb size={20} />
+                  </div>
+                  <h3 className="text-2xl font-bold">Personalized Action Plan</h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {recommendations.map((rec, i) => (
+                    <div key={i} className="flex items-start space-x-4 bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                      <div className="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[10px] font-black underline">
+                        {i + 1}
+                      </div>
+                      <p className="text-white/90 font-medium leading-relaxed">{rec}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Decorative circle */}
+              <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
             </div>
+          </section>
+
+          {/* Footer Controls */}
+          <div className="flex flex-col md:flex-row justify-center gap-6 pt-6">
+            <button
+              onClick={onHome}
+              className="flex items-center justify-center px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold text-lg hover:bg-gray-200 transition active:scale-95"
+            >
+              <LayoutDashboard className="mr-2" size={20} /> Return to Dashboard
+            </button>
+            <button
+              onClick={onRetry}
+              className="flex items-center justify-center px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold text-lg hover:bg-black transition active:scale-95 shadow-lg shadow-gray-900/20"
+            >
+              <RotateCcw className="mr-2" size={20} /> Try Another Module
+            </button>
           </div>
 
         </div>
-
-        {/* FOOTER */}
-        <div style={styles.footer}>
-          <button onClick={onHome} style={styles.secondaryBtn}>Dashboard</button>
-          <button onClick={onRetry} style={styles.primaryBtn}>Retry Module</button>
-        </div>
-
-      </div>
+      </motion.div>
     </div>
   );
-};
-
-// Clean Professional Styles
-const styles = {
-  container: { padding: '40px 20px', background: '#f4f6f8', minHeight: '100vh', fontFamily: 'Arial, sans-serif' },
-  paper: { maxWidth: '900px', margin: '0 auto', background: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', overflow: 'hidden' },
-  header: { padding: '35px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  scoreBadge: { background: 'rgba(255,255,255,0.25)', padding: '10px 25px', borderRadius: '12px', color: 'white', textAlign: 'center' },
-  gridContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', padding: '30px', borderBottom: '1px solid #f0f0f0', background: '#fff' },
-  metricCard: { background: '#f8f9fa', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid #eee' },
-  metricLabel: { display: 'block', fontSize: '12px', color: '#666', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' },
-  metricValue: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
-  contentPadding: { padding: '30px' },
-  section: { marginBottom: '40px' },
-  sectionTitle: { fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' },
-  criteriaBox: { background: '#fff', border: '1px solid #eee', padding: '20px', borderRadius: '10px' },
-  progressBarBg: { width: '100%', height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' },
-  progressBarFill: { height: '100%', borderRadius: '4px' },
-  successBox: { padding: '20px', background: '#e8f5e9', color: '#2e7d32', borderRadius: '10px', border: '1px solid #c8e6c9', textAlign: 'center', fontWeight: 'bold' },
-  tableContainer: { border: '1px solid #eee', borderRadius: '10px', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
-  th: { padding: '15px', color: '#555', fontWeight: 'bold', borderBottom: '2px solid #eee' },
-  td: { padding: '15px', verticalAlign: 'top', borderBottom: '1px solid #f9f9f9' },
-  recBox: { background: '#e3f2fd', padding: '25px', borderRadius: '12px', borderLeft: '5px solid #2196f3' },
-  footer: { padding: '25px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: '15px', borderTop: '1px solid #eee' },
-  primaryBtn: { padding: '12px 30px', background: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
-  secondaryBtn: { padding: '12px 30px', background: 'white', color: '#555', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }
 };
 
 export default DetailedReport;

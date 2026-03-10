@@ -1,44 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Clock,
+  ArrowLeft,
+  ChevronRight,
+  PenTool,
+  CheckCircle2,
+  Send,
+  AlertCircle
+} from 'lucide-react';
 import TopicSelection from '../components/TopicSelection';
 import DetailedReport from '../components/DetailedReport';
+import api from '../utils/api';
 
 const WritingTest = () => {
-  // --- STATE MANAGEMENT ---
-  const [phase, setPhase] = useState('topic'); // 'topic' | 'write' | 'report'
+  const [phase, setPhase] = useState('topic');
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
-  
-  // Timer State (5 Minutes = 300 Seconds)
-  const [timeLeft, setTimeLeft] = useState(300); 
+  const [timeLeft, setTimeLeft] = useState(300);
 
-  // --- DATA: Topics with Keywords for AI Relevance Check ---
-  const topics = [
-    { 
-      id: 1, 
-      title: "Tech Trends", 
-      desc: "Discuss the impact of Artificial Intelligence on the job market.", 
-      color: '#9c27b0', 
-      prompt: "Artificial Intelligence AI machine learning automation future jobs technology innovation data workforce displacement efficiency economy" 
-    },
-    { 
-      id: 2, 
-      title: "Remote Work", 
-      desc: "Is working from home more productive than office work?", 
-      color: '#009688', 
-      prompt: "Remote work home office productivity flexibility communication mental health balance commute collaboration zoom teams digital nomad" 
-    },
-    { 
-        id: 3, 
-        title: "Sustainability", 
-        desc: "Why is sustainable development important?", 
-        color: '#4caf50', 
-        prompt: "Sustainability environment climate change green energy resources future pollution recycling carbon footprint global warming nature" 
+  const [topics, setTopics] = useState([]);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const res = await api.get('/tasks');
+        const specificTasks = res.data.filter(t => t.type === 'WRITING');
+        setTopics(specificTasks.map((t, idx) => ({
+          ...t,
+          desc: t.description,
+          prompt: t.passage,
+          color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][idx % 4]
+        })));
+      } catch (e) {
+        console.error("Failed to fetch writing tasks:", e);
       }
-  ];
+    };
+    fetchTasks();
+  }, []);
 
-  // --- TIMER LOGIC ---
   useEffect(() => {
     let timerId;
     if (phase === 'write' && timeLeft > 0) {
@@ -46,7 +48,7 @@ const WritingTest = () => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (phase === 'write' && timeLeft === 0) {
-      handleSubmit(); // Auto-submit on timeout
+      handleSubmit();
     }
     return () => clearInterval(timerId);
   }, [phase, timeLeft]);
@@ -57,189 +59,178 @@ const WritingTest = () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // --- SUBMIT LOGIC ---
   const handleSubmit = async () => {
-    if (timeLeft > 0 && (!text || text.length < 20)) {
-      alert("Please write at least 20 characters before submitting.");
+    if (timeLeft > 0 && (!text || text.trim().split(/\s+/).length < 20)) {
+      alert("Please write at least 20 words before submitting.");
       return;
     }
 
     setLoading(true);
-    
+
     try {
-        const topicPrompt = selectedTopic?.prompt || "General";
-        
-        // Call Backend API
-        const res = await fetch('http://localhost:5000/api/writing/analyze', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                text: text, 
-                topic: topicPrompt 
-            }) 
-        });
-        
-        const data = await res.json();
-        
-        if (data.error) throw new Error(data.error);
+      const topicPrompt = selectedTopic?.prompt || "General";
 
-        // Prepare Data for DetailedReport
-        setReportData({
-            score: data.score,
-            title: "Writing Assessment",
-            // 1. Top Cards
-            metrics: [
-                { label: "Word Count", value: text.split(' ').length },
-                { label: "Time Remaining", value: formatTime(timeLeft) },
-                { label: "Grammar Score", value: data.criteria['Grammar Accuracy'] },
-                { label: "Relevance Score", value: `${data.criteria['Task Fulfillment']}%` }
-            ],
-            // 2. Placement Criteria (Progress Bars)
-            criteria: {
-                "Grammar Accuracy": data.criteria['Grammar Accuracy'],
-                "Task Fulfillment (Relevance)": data.criteria['Task Fulfillment'],
-                "Professional Tone": data.criteria['Professional Tone'],
-                "Coherence & Logical Flow": data.criteria['Coherence & Flow'],
-                "Clarity of Expression": data.criteria['Clarity of Expression']
-            },
-            // 3. Mistakes Table
-            mistakes: data.errors.map(e => ({ 
-                type: "Grammar/Spelling", 
-                question: e.issue, 
-                userAnswer: e.word, 
-                correctAnswer: e.suggestion 
-            })),
-            // 4. Recommendations
-            recommendations: [
-                data.structure_feedback,
-                data.criteria['Professional Tone'] < 70 ? "Avoid casual slang (e.g., 'gonna', 'cool') for a more professional tone." : "Excellent professional tone used.",
-                data.criteria['Task Fulfillment'] < 50 ? "Ensure your essay directly addresses the topic prompt." : "Good job staying on topic."
-            ]
-        });
-        setPhase('report');
+      const res = await api.post('/writing/analyze', {
+        text: text,
+        topic: topicPrompt,
+        taskId: selectedTopic?.id
+      });
 
-    } catch(e) { 
-        alert("System Error: " + e.message); 
+      const data = res.data;
+      if (data.error) throw new Error(data.error);
+
+      setReportData({
+        score: data.score,
+        title: "Writing",
+        metrics: [
+          { label: "Word Count", value: text.trim().split(/\s+/).length },
+          { label: "Time Taken", value: formatTime(300 - timeLeft) },
+          { label: "Grammar Grade", value: data.criteria['Grammar Accuracy'] >= 90 ? 'A+' : data.criteria['Grammar Accuracy'] >= 70 ? 'B' : 'C' },
+          { label: "Topic Lock", value: `${data.criteria['Task Fulfillment']}%` }
+        ],
+        criteria: {
+          "Grammar Accuracy": data.criteria['Grammar Accuracy'],
+          "Task Fulfillment": data.criteria['Task Fulfillment'],
+          "Professional Tone": data.criteria['Professional Tone'],
+          "Logical Coherence": data.criteria['Coherence & Logical Flow'],
+          "Expression Clarity": data.criteria['Clarity of Expression']
+        },
+        mistakes: data.errors.map(e => ({
+          type: "AI Detection",
+          question: e.issue,
+          userAnswer: e.word,
+          correctAnswer: e.suggestion
+        })),
+        recommendations: [
+          data.structure_feedback,
+          data.criteria['Professional Tone'] < 70 ? "Your tone is slightly informal. Try replacing contractions and slang." : "Excellent professional tone maintained.",
+          data.criteria['Task Fulfillment'] < 50 ? "Focus more on the specific core keywords of the prompt." : "Clear alignment with the assigned topic."
+        ]
+      });
+      setPhase('report');
+
+    } catch (e) {
+      alert("Assessment System Offline: " + e.message);
     }
-    
     setLoading(false);
   };
 
-  // --- RENDER PHASES ---
-
-  // 1. Topic Selection
-  if(phase === 'topic') {
-    return (
-      <TopicSelection 
-        title="Writing" 
-        topics={topics} 
-        onSelect={(t) => {
-          setSelectedTopic(t); 
-          setText(""); 
-          setTimeLeft(300); // 5 Minutes
-          setPhase('write');
-        }} 
-        onBack={() => window.location.href='/'} 
-      />
-    );
+  if (phase === 'topic') {
+    return <TopicSelection title="Writing" topics={topics} onSelect={(t) => { setSelectedTopic(t); setPhase('write'); }} onBack={() => window.location.href = '/dashboard'} />;
   }
 
-  // 2. Writing Interface
-  if(phase === 'write') {
+  if (phase === 'write') {
     return (
-      <div style={{maxWidth:'900px', margin:'20px auto', fontFamily:'Arial', padding:'20px'}}>
-          {/* Header Bar */}
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-            <button onClick={()=>setPhase('topic')} style={{border:'none', background:'transparent', fontSize:'16px', cursor:'pointer', color:'#555'}}>← Change Topic</button>
-            
-            <div style={{
-                background: timeLeft < 60 ? '#ffebee' : '#e3f2fd', 
-                color: timeLeft < 60 ? '#c62828' : '#1565c0', 
-                padding: '8px 20px', 
-                borderRadius: '30px', 
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-            }}>
-                <span>⏱</span>
-                <span>{formatTime(timeLeft)}</span>
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Header Navigation */}
+        <div className="flex justify-between items-center mb-8">
+          <button
+            onClick={() => setPhase('topic')}
+            className="flex items-center text-gray-400 hover:text-primary-600 transition font-bold uppercase tracking-widest text-xs"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Change Prompt
+          </button>
+
+          <div className={`flex items-center space-x-3 px-6 py-3 rounded-2xl font-black text-xl shadow-lg border ${timeLeft < 60 ? 'bg-rose-50 text-rose-600 border-rose-100 animate-pulse' : 'bg-white text-gray-900 border-gray-100'
+            }`}>
+            <Clock size={24} className={timeLeft < 60 ? 'text-rose-500' : 'text-primary-500'} />
+            <span>{formatTime(timeLeft)}</span>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-10">
+          {/* Sidebar / Prompt info */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-8 border-l-primary-500">
+              <div className="flex items-center space-x-3 mb-4">
+                <PenTool className="text-primary-500" size={20} />
+                <span className="font-bold text-gray-400 text-xs uppercase tracking-widest">Active Prompt</span>
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-4 leading-tight">{selectedTopic.title}</h3>
+              <p className="text-gray-600 leading-relaxed font-medium">{selectedTopic.desc}</p>
+            </div>
+
+            <div className="bg-indigo-900 p-8 rounded-[2rem] text-white overflow-hidden relative shadow-xl shadow-indigo-900/20">
+              <h4 className="font-black text-lg mb-4 flex items-center">
+                <CheckCircle2 className="mr-2 text-indigo-400" size={20} />
+                Tips for High Score
+              </h4>
+              <ul className="space-y-3 text-indigo-200 text-sm font-medium relative z-10">
+                <li>• Use academic vocabulary</li>
+                <li>• Connect ideas with transitions</li>
+                <li>• Maintain formal writing style</li>
+                <li>• Stay focused on the prompt</li>
+              </ul>
+              <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
             </div>
           </div>
-          
-          {/* Prompt Box */}
-          <div style={{background:'#fff', padding:'25px', borderRadius:'12px', marginBottom:'20px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', borderLeft:'5px solid #673ab7'}}>
-            <h3 style={{marginTop:0, color:'#673ab7'}}>{selectedTopic.title}</h3>
-            <p style={{color:'#333', fontSize:'18px', margin:0}}>{selectedTopic.desc}</p>
-          </div>
 
-          {/* Text Area */}
-          <textarea 
-            rows="15" 
-            style={{
-                width:'100%', 
-                padding:'20px', 
-                fontSize:'16px', 
-                borderRadius:'12px', 
-                border:'1px solid #ddd', 
-                fontFamily:'inherit', 
-                boxSizing:'border-box',
-                resize: 'vertical',
-                lineHeight: '1.6',
-                outlineColor: '#673ab7'
-            }} 
-            value={text} 
-            onChange={e => setText(e.target.value)} 
-            placeholder="Start typing your essay here... Focus on clarity, grammar, and relevance." 
-          />
-          
-          {/* Submit Button */}
-          <button 
-            onClick={handleSubmit} 
-            disabled={loading} 
-            style={{
-              marginTop:'20px', 
-              padding:'15px 40px', 
-              background: loading ? '#b0bec5' : '#673ab7', 
-              color:'white', 
-              border:'none', 
-              borderRadius:'30px', 
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize:'18px',
-              fontWeight:'bold',
-              float: 'right',
-              transition: 'background 0.3s'
-            }}
-          >
-              {loading ? "Analyzing Essay..." : "Submit Essay"}
-          </button>
+          {/* Main Editor */}
+          <div className="lg:col-span-2 flex flex-col h-full">
+            <div className="relative flex-grow flex flex-col">
+              <textarea
+                className="w-full h-[500px] p-10 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm text-xl text-gray-800 leading-relaxed font-medium focus:outline-none focus:ring-4 focus:ring-primary-100 transition resize-none placeholder:text-gray-200"
+                placeholder="Begin composing your response here..."
+                value={text}
+                onChange={e => setText(e.target.value)}
+                disabled={loading}
+              />
+
+              <div className="absolute bottom-10 right-10 flex space-x-4 items-center">
+                <div className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-400 border border-gray-100">
+                  {text.trim().split(/\s+/).filter(w => w).length} Words
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || text.length < 10}
+                  className={`flex items-center px-10 py-5 rounded-2xl font-black text-lg transition transform active:scale-[0.98] shadow-2xl h-full ${loading || text.length < 10
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-900 text-white hover:bg-black shadow-gray-900/20'
+                    }`}
+                >
+                  {loading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Analyzing...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      Submit Response <Send size={20} className="ml-3" />
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {text.length > 0 && text.length < 50 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 flex items-center space-x-2 text-rose-500 bg-rose-50 px-6 py-4 rounded-2xl border border-rose-100 font-bold"
+              >
+                <AlertCircle size={20} />
+                <span>Response is too short for comprehensive AI analysis.</span>
+              </motion.div>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
 
-  // 3. Report
-  if(phase === 'report') {
-    return (
-      <DetailedReport 
-        title="Writing" 
-        score={reportData.score}
-        metrics={reportData.metrics}
-        criteria={reportData.criteria}
-        mistakes={reportData.mistakes}
-        recommendations={reportData.recommendations}
-        onRetry={() => {
-          setPhase('write'); 
-          setReportData(null);
-          setText("");
-          setTimeLeft(300);
-        }} 
-        onHome={() => window.location.href='/'} 
-      />
-    );
-  }
-
-  return null;
+  return (
+    <DetailedReport
+      {...reportData}
+      transcript={text}
+      onRetry={() => {
+        setPhase('topic');
+        setReportData(null);
+        setText("");
+        setTimeLeft(300);
+      }}
+      onHome={() => window.location.href = '/dashboard'}
+    />
+  );
 };
 
 export default WritingTest;

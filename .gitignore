@@ -11,6 +11,7 @@ __pycache__/
 # Environment variables (Safety)
 .env
 
+ai-engine/ffmpeg.zip
 # Build outputs
 build/
 dist/

@@ -27,7 +27,9 @@ const ReadingTest = () => {
       passage: "Cloud computing provides on-demand computing resources over the internet, essentially shifting local infrastructure to remote data centers. It offers three primary service models: Infrastructure as a Service (IaaS), Platform as a Service (PaaS), and Software as a Service (SaaS). Each model provides different levels of control and flexibility, allowing businesses to scale resources dynamically without maintaining physical hardware.",
       questions: [
         { id: "q1", type: "Main Idea", text: "What is the primary function of cloud computing according to the passage?", opts: ["Local machine backup", "On-demand internet resources", "Social Media hosting"], correctAnswer: "On-demand internet resources", time: 20 },
-        { id: "q2", type: "Terminology", text: "What does the 'S' in SaaS represent?", opts: ["Software", "System", "Speed"], correctAnswer: "Software", time: 15 }
+        { id: "q2", type: "Terminology", text: "What does the 'S' in SaaS represent?", opts: ["Software", "System", "Speed"], correctAnswer: "Software", time: 15 },
+        { id: "q3", type: "True/False", text: "Cloud computing requires maintaining physical hardware locally.", opts: ["True", "False"], correctAnswer: "False", time: 15 },
+        { id: "q4", type: "Inference", text: "Which model likely provides the least user control but maximum convenience?", opts: ["IaaS", "PaaS", "SaaS", "On-Premise"], correctAnswer: "SaaS", time: 20 }
       ]
     },
     {
@@ -35,7 +37,9 @@ const ReadingTest = () => {
       passage: "Blue Ocean Strategy involves creating entirely new market space (the 'Blue Ocean') rather than competing in existing crowded industries (the 'Red Ocean'). This strategic move makes the competition irrelevant by delivering a leap in value for both the company and its customers. It focuses on innovation and cost-effective value creation to unlock new demand.",
       questions: [
         { id: "q1", type: "Strategic Goal", text: "What is the central goal of the Blue Ocean Strategy?", opts: ["Aggressive pricing", "New market creation", "Acquiring competitors"], correctAnswer: "New market creation", time: 20 },
-        { id: "q2", type: "Competitive Logic", text: "Under this strategy, what happens to existing rivals?", opts: ["They become more powerful", "They become irrelevant", "They merge together"], correctAnswer: "Becomes irrelevant", time: 15 }
+        { id: "q2", type: "Competitive Logic", text: "Under this strategy, what happens to existing rivals?", opts: ["They become more powerful", "They become irrelevant", "They merge together"], correctAnswer: "They become irrelevant", time: 15 },
+        { id: "q3", type: "Concept Match", text: "What does 'Red Ocean' refer to?", opts: ["Untapped markets", "Existing crowded industries", "Ocean life", "Government regulation"], correctAnswer: "Existing crowded industries", time: 20 },
+        { id: "q4", type: "True/False", text: "Blue Ocean Strategy relies solely on aggressive price cutting.", opts: ["True", "False"], correctAnswer: "False", time: 15 }
       ]
     }
   ];

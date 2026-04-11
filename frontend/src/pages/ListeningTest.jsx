@@ -13,6 +13,91 @@ const getYoutubeId = (url) => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
+const YoutubePlayer = ({ youtubeId, onHalfway, onPlay }) => {
+    const playerContainerRef = React.useRef(null);
+    const callbacksRef = React.useRef({ onHalfway, onPlay });
+
+    useEffect(() => {
+        callbacksRef.current = { onHalfway, onPlay };
+    }, [onHalfway, onPlay]);
+
+    useEffect(() => {
+        let player;
+        let timer;
+        let isContainerValid = true;
+
+        const checkHalfway = () => {
+            if (player && player.getCurrentTime && player.getDuration) {
+                const current = player.getCurrentTime();
+                const duration = player.getDuration();
+                if (duration > 0 && current / duration >= 0.5) {
+                    callbacksRef.current.onHalfway();
+                } else {
+                    timer = setTimeout(checkHalfway, 1000);
+                }
+            }
+        };
+
+        const initPlayer = () => {
+            if (!isContainerValid || !playerContainerRef.current) return;
+            try {
+                player = new window.YT.Player(playerContainerRef.current, {
+                    videoId: youtubeId,
+                    width: '100%',
+                    height: '100%',
+                    playerVars: { rel: 0, enablejsapi: 1, origin: window.location.origin, playsinline: 1 },
+                    events: {
+                        onStateChange: (event) => {
+                            if (event.data === window.YT.PlayerState.PLAYING) {
+                                callbacksRef.current.onPlay();
+                                checkHalfway();
+                            } else {
+                                clearTimeout(timer);
+                            }
+                        }
+                    }
+                });
+            } catch (err) { }
+        };
+
+        // If the script is already loaded and ready
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+        } else {
+            // Load the script
+            if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+                const tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                const firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            }
+            
+            // Override the ready function
+            const oldReady = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                if (oldReady) oldReady();
+                initPlayer();
+            };
+        }
+
+        return () => {
+            isContainerValid = false;
+            clearTimeout(timer);
+            if (player && player.destroy) {
+                try { player.destroy(); } catch(e) {}
+            }
+        };
+    }, [youtubeId]); 
+
+    return (
+        <div className="relative w-full max-w-3xl mx-auto rounded-[2rem] shadow-lg mb-10 bg-gray-900 border-4 border-gray-900 overflow-hidden" style={{ paddingTop: '56.25%' }}>
+            <div className="absolute top-0 left-0 w-full h-full">
+                <div id={`ytplayer-${youtubeId}`} ref={playerContainerRef}></div>
+            </div>
+        </div>
+    );
+};
+
 const ListeningTest = () => {
     const [phase, setPhase] = useState('topic');
     const [selectedTopic, setSelectedTopic] = useState(null);
@@ -20,6 +105,12 @@ const ListeningTest = () => {
     const [startTime, setStartTime] = useState(0);
     const [playCount, setPlayCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [canProceed, setCanProceed] = useState(false);
+
+    // Reset proceed flag when topic changes
+    useEffect(() => {
+        setCanProceed(false);
+    }, [phase]);
 
     // Fallback topics if backend is empty
     const defaultTopics = [
@@ -28,7 +119,9 @@ const ListeningTest = () => {
             audioUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/The_History_of_the_Computer.ogg",
             questions: [
                 { id: "q1", type: "Main Idea", text: "What is the primary focus of the audio?", opts: ["Future Gaming", "History of Computing", "Robot Development"], correctAnswer: "History of Computing", time: 20 },
-                { id: "q2", type: "Detail Accuracy", text: "Which early calculation device is mentioned?", opts: ["Smartphone", "Abacus", "Tesla Engine"], correctAnswer: "Abacus", time: 20 }
+                { id: "q2", type: "Detail Accuracy", text: "Which early calculation device is mentioned?", opts: ["Smartphone", "Abacus", "Tesla Engine"], correctAnswer: "Abacus", time: 20 },
+                { id: "q3", type: "True/False", text: "The abacus was invented in the 20th century.", opts: ["True", "False"], correctAnswer: "False", time: 15 },
+                { id: "q4", type: "Inference", text: "Which era most likely sparked the biggest jump in computing?", opts: ["Stone Age", "Industrial Revolution", "Information Age", "Renaissance"], correctAnswer: "Information Age", time: 25 }
             ]
         },
         {
@@ -36,7 +129,9 @@ const ListeningTest = () => {
             audioUrl: "https://www.w3schools.com/html/horse.mp3",
             questions: [
                 { id: "q1", type: "Identification", text: "Identify the animal recorded in the clip.", opts: ["Domestic Cow", "Stallion (Horse)", "Mountain Sheep"], correctAnswer: "Stallion (Horse)", time: 15 },
-                { id: "q2", type: "Contextual Logic", text: "In what environment would you most likely hear this sound?", opts: ["Underwater", "Traditional Farm", "Space Station"], correctAnswer: "Traditional Farm", time: 15 }
+                { id: "q2", type: "Contextual Logic", text: "In what environment would you most likely hear this sound?", opts: ["Underwater", "Traditional Farm", "Space Station"], correctAnswer: "Traditional Farm", time: 15 },
+                { id: "q3", type: "Emotion Analysis", text: "What emotion does the animal sound suggest?", opts: ["Calm", "Distressed or Alert", "Sleeping", "Eating"], correctAnswer: "Distressed or Alert", time: 20 },
+                { id: "q4", type: "Sequence", text: "What action typically follows this sound?", opts: ["Swimming", "Running/Galloping", "Flying", "Burrowing"], correctAnswer: "Running/Galloping", time: 20 }
             ]
         }
     ];
@@ -94,7 +189,6 @@ const ListeningTest = () => {
                 { label: "Overall Accuracy", value: `${score}%` },
                 { label: "Focus Rank", value: score > 80 ? "Alpha" : "Beta" }
             ],
-            criteria,
             mistakes,
             recommendations: [
                 playCount > 1 ? "Try to answer without replaying for higher score." : "Excellent concentration, single playback.",
@@ -118,23 +212,20 @@ const ListeningTest = () => {
         }
     };
 
+    const handleTimeUpdate = (e) => {
+        const { currentTime, duration } = e.target;
+        if (duration > 0 && currentTime / duration >= 0.5) {
+            setCanProceed(true);
+        }
+    };
+
+
+
     const renderMedia = (url) => {
         const youtubeId = getYoutubeId(url);
 
         if (youtubeId) {
-            return (
-                <div className="relative w-full max-w-3xl mx-auto overflow-hidden rounded-[2rem] shadow-lg mb-10 bg-gray-900 border-4 border-gray-900" style={{ paddingTop: '56.25%' }}>
-                    <iframe
-                        className="absolute top-0 left-0 w-full h-full"
-                        src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        onLoad={() => setPlayCount(p => p + 1)}
-                    ></iframe>
-                </div>
-            );
+            return <YoutubePlayer youtubeId={youtubeId} onHalfway={() => setCanProceed(true)} onPlay={() => setPlayCount(p => p + 1)} />;
         }
 
         if (url && url.match(/\.(mp4|webm|ogg|mov)$/i)) {
@@ -144,6 +235,7 @@ const ListeningTest = () => {
                         controls
                         className="w-full outline-none"
                         onPlay={() => setPlayCount(p => p + 1)}
+                        onTimeUpdate={handleTimeUpdate}
                     >
                         <source src={url} />
                         Your browser does not support the video tag.
@@ -162,6 +254,7 @@ const ListeningTest = () => {
                     controls
                     className="w-full h-12 rounded-full"
                     onPlay={() => setPlayCount(p => p + 1)}
+                    onTimeUpdate={handleTimeUpdate}
                 >
                     <source src={url} />
                     Your browser does not support audio playback.
@@ -194,15 +287,21 @@ const ListeningTest = () => {
                         {renderMedia(selectedTopic.audioUrl)}
 
                         <div className="flex flex-col items-center space-y-6">
-                            <button
-                                onClick={() => {
-                                    setPhase('quiz');
-                                    setStartTime(Date.now());
-                                }}
-                                className="px-12 py-5 bg-gray-900 text-white rounded-2xl font-black text-xl hover:bg-black transition transform hover:-translate-y-1 active:scale-95 flex items-center shadow-xl shadow-gray-900/20"
-                            >
-                                Proceed to Questions <Play className="ml-3 h-5 w-5 fill-current" />
-                            </button>
+                            <div className="flex flex-col items-center">
+                                <button
+                                    onClick={() => {
+                                        if (canProceed) {
+                                            setPhase('quiz');
+                                            setStartTime(Date.now());
+                                        }
+                                    }}
+                                    disabled={!canProceed}
+                                    className={`px-12 py-5 rounded-2xl font-black text-xl transition transform flex items-center shadow-xl ${canProceed ? 'bg-gray-900 text-white hover:bg-black hover:-translate-y-1 active:scale-95 shadow-gray-900/20' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                >
+                                    Proceed to Questions <Play className="ml-3 h-5 w-5 fill-current" />
+                                </button>
+                                {!canProceed && <span className="text-sm text-rose-500 font-bold mt-3">Please listen to at least half of the media to unlock the quiz.</span>}
+                            </div>
 
                             <div className="flex items-center space-x-2 text-emerald-600 font-bold bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 italic">
                                 <ShieldCheck size={18} />

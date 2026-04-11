@@ -42,6 +42,8 @@ router.get('/users', authMiddleware, authorize(['ADMIN']), async (req, res) => {
 
         const mappedUsers = users.map(u => ({
             id: u.id,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
             name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email.split('@')[0],
             email: u.email,
             role: u.role,
@@ -113,6 +115,46 @@ router.patch('/users/:id/status', authMiddleware, authorize(['ADMIN']), async (r
 });
 
 // Delete user
+router.delete('/users/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    try {
+        await prisma.user.delete({
+            where: { id: req.params.id }
+        });
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// Update user details (name and email)
+router.put('/users/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    const { firstName, lastName, email, role } = req.body;
+    try {
+        // Validate email uniqueness if email is changed
+        if (email) {
+            const existingUser = await prisma.user.findFirst({
+                where: { email, id: { not: req.params.id } }
+            });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email already strictly in use' });
+            }
+        }
+        
+        const updatedUser = await prisma.user.update({
+            where: { id: req.params.id },
+            data: { 
+                firstName, 
+                lastName, 
+                email,
+                role
+            }
+        });
+        res.json(updatedUser);
+    } catch (error) {
+        console.error("Update error:", error);
+        res.status(500).json({ error: 'Failed to update user details' });
+    }
+});
 router.delete('/users/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
     try {
         await prisma.user.delete({

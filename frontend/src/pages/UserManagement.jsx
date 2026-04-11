@@ -12,7 +12,8 @@ import {
     Trash2,
     CheckCircle,
     UserCircle,
-    Power
+    Power,
+    Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
@@ -23,6 +24,8 @@ const UserManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteData, setInviteData] = useState({ email: '', firstName: '', lastName: '', role: 'STUDENT' });
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editData, setEditData] = useState({ id: '', email: '', firstName: '', lastName: '', role: 'STUDENT' });
 
     const fetchUsers = async () => {
         try {
@@ -58,6 +61,19 @@ const UserManagement = () => {
         } catch (error) {
             console.error("Invite error:", error);
             alert(error.response?.data?.error || 'Failed to invite user');
+        }
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.put(`/admin/users/${editData.id}`, editData);
+            setShowEditModal(false);
+            fetchUsers();
+            alert('User updated successfully!');
+        } catch (error) {
+            console.error("Update error:", error);
+            alert(error.response?.data?.error || 'Failed to update user');
         }
     };
 
@@ -183,6 +199,19 @@ const UserManagement = () => {
                                     </td>
                                     <td className="px-10 py-6 text-right">
                                         <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+                                            {u.role !== 'ADMIN' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditData({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role });
+                                                        setShowEditModal(true);
+                                                    }}
+                                                    title="Edit Details"
+                                                    className="p-2.5 bg-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                            )}
+
                                             <button
                                                 onClick={() => handleUpdateRole(u.id, u.role === 'ADMIN' ? 'TEACHER' : 'ADMIN')}
                                                 title={`Change to ${u.role === 'ADMIN' ? 'TEACHER' : 'ADMIN'}`}
@@ -293,7 +322,6 @@ const UserManagement = () => {
                                     >
                                         <option value="STUDENT">STUDENT</option>
                                         <option value="TEACHER">TEACHER</option>
-                                        <option value="ADMIN">ADMIN</option>
                                     </select>
                                 </div>
 
@@ -302,6 +330,94 @@ const UserManagement = () => {
                                     className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-lg hover:bg-black transition shadow-xl mt-4"
                                 >
                                     Send Invitation
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+
+                {showEditModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+                            onClick={() => setShowEditModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 100, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 100, scale: 0.9 }}
+                            className="relative w-full max-w-lg bg-white rounded-[3rem] shadow-2xl overflow-hidden p-10"
+                        >
+                            <div className="flex justify-between items-center mb-8">
+                                <div className="p-3 bg-indigo-900 text-white rounded-2xl">
+                                    <Edit2 size={24} />
+                                </div>
+                                <button
+                                    onClick={() => setShowEditModal(false)}
+                                    className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <h2 className="text-3xl font-black text-gray-900 mb-2">Edit User Details</h2>
+                            <p className="text-gray-500 font-medium mb-8">Update the profile and system access levels.</p>
+
+                            <form onSubmit={handleEditSubmit} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">First Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editData.firstName}
+                                            onChange={(e) => setEditData({ ...editData, firstName: e.target.value })}
+                                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 transition font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Last Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editData.lastName}
+                                            onChange={(e) => setEditData({ ...editData, lastName: e.target.value })}
+                                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 transition font-bold"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Email Address</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={editData.email}
+                                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 transition font-bold"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Global Role</label>
+                                    <select
+                                        value={editData.role}
+                                        onChange={(e) => setEditData({ ...editData, role: e.target.value })}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 transition font-bold appearance-none"
+                                    >
+                                        <option value="STUDENT">STUDENT</option>
+                                        <option value="TEACHER">TEACHER</option>
+                                    </select>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-lg hover:bg-indigo-700 transition shadow-xl mt-4 border-none"
+                                >
+                                    Save Changes
                                 </button>
                             </form>
                         </motion.div>

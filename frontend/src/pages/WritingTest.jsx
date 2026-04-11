@@ -163,6 +163,13 @@ const WritingTest = () => {
               </ul>
               <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
             </div>
+
+            <button
+                onClick={() => setText("Subject: [Insert descriptive subject here]\n\nDear [Name],\n\n[Opening stating purpose of email]\n\n[Main Body - Provide specific details here]\n\n[Closing/Call to Action]\n\nSincerely,\n[Your Name]\n")}
+                className="mt-6 w-full flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-600 px-6 py-4 rounded-xl font-bold shadow-sm border border-indigo-100 hover:bg-indigo-100 transition active:scale-[0.98]"
+            >
+                Insert Standard Email Format
+            </button>
           </div>
 
           {/* Main Editor */}

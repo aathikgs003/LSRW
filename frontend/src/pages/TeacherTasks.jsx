@@ -41,6 +41,14 @@ const TeacherTasks = () => {
         questions: []
     });
     const [viewingQuizId, setViewingQuizId] = useState(null);
+    const [filterType, setFilterType] = useState('ALL');
+    const [filterDifficulty, setFilterDifficulty] = useState('ALL');
+
+    const filteredTasks = tasks.filter((task) => {
+        const typeMatch = filterType === 'ALL' || task.type === filterType;
+        const difficultyMatch = filterDifficulty === 'ALL' || task.difficulty === filterDifficulty;
+        return typeMatch && difficultyMatch;
+    });
 
     const getIcon = (type) => {
         switch (type) {
@@ -121,14 +129,89 @@ const TeacherTasks = () => {
         }
     };
 
+    const extractSentences = (text) => {
+        return text
+            .replace(/\n+/g, ' ')
+            .split(/(?<=[.!?])\s+/)
+            .map((sentence) => sentence.trim())
+            .filter((sentence) => sentence.length > 10);
+    };
+
+    const normalizeText = (text) => text.replace(/\s+/g, ' ').trim();
+
+    const createOptions = (correct, fallback) => {
+        const optionA = correct;
+        const optionB = fallback ? fallback : `${correct.split(' ').slice(0, 3).join(' ')}...`;
+        const optionC = correct.includes('not') || correct.includes('No') ? `Another correct choice` : `A different conclusion`;
+        const uniqueOptions = Array.from(new Set([optionA, optionB, optionC]));
+        while (uniqueOptions.length < 3) {
+            uniqueOptions.push(`Another option ${uniqueOptions.length + 1}`);
+        }
+        return uniqueOptions.slice(0, 3);
+    };
+
+    const generateQuestionFromPassage = (passage, index, questionTime) => {
+        const sourceText = normalizeText(passage || newTask.description || newTask.title || '');
+        const sentences = extractSentences(sourceText);
+        const sentence = sentences[index] || sentences[0] || sourceText;
+        const cleanSentence = normalizeText(sentence);
+        const phrase = cleanSentence.split(/[,;:.!?]/)[0].trim();
+        const questionTypes = ['Main Idea', 'Detail Accuracy', 'Contextual Logic', 'Vocabulary'];
+        const type = questionTypes[index % questionTypes.length];
+
+        let questionText = '';
+        let correctAnswer = '';
+        let fallback = '';
+
+        switch (type) {
+            case 'Main Idea':
+                questionText = `What is the main idea of the passage?`;
+                correctAnswer = phrase;
+                fallback = sentences[1] || sentences[2] || `Another theme from the passage.`;
+                break;
+            case 'Detail Accuracy':
+                questionText = `Which statement is most clearly supported by the passage?`;
+                correctAnswer = phrase;
+                fallback = sentences[(index + 1) % sentences.length] || `A different detail that is not mentioned.`;
+                break;
+            case 'Contextual Logic':
+                questionText = `What can be inferred from the passage?`;
+                correctAnswer = phrase;
+                fallback = sentences[(index + 2) % sentences.length] || `A vague implication from the passage.`;
+                break;
+            default:
+                questionText = `Which statement best summarizes this part of the passage?`;
+                correctAnswer = phrase;
+                fallback = sentences[(index + 1) % sentences.length] || `Another related point.`;
+        }
+
+        const options = createOptions(correctAnswer, fallback).map((opt) => normalizeText(opt));
+        return {
+            id: Date.now() + index,
+            type,
+            questionText,
+            options,
+            correctAnswer: options[0],
+            time: questionTime
+        };
+    };
+
     const handleAutoGenerateQuiz = () => {
-        // Mocking AI Quiz Generation based on title/description/type
-        const mockQuestions = [
-            { id: Date.now() + 1, type: "Main Idea", questionText: `What is the primary focus of "${newTask.title}"?`, options: ["Option A", "Option B", "Option C"], correctAnswer: "Option A", time: 20 },
-            { id: Date.now() + 2, type: "Detail Accuracy", questionText: "According to the material, which of these is true?", options: ["Correct Detail", "False Detail 1", "False Detail 2"], correctAnswer: "Correct Detail", time: 20 },
-            { id: Date.now() + 3, type: "Contextual Logic", questionText: "What can be inferred from the provided context?", options: ["Inference X", "Inference Y", "Inference Z"], correctAnswer: "Inference X", time: 20 }
-        ];
-        setNewTask(prev => ({ ...prev, questions: mockQuestions }));
+        const questionCountInput = window.prompt('How many questions do you want to generate?', '3');
+        const questionCount = parseInt(questionCountInput, 10) || 0;
+        if (questionCount <= 0) return;
+
+        const questionTimeInput = window.prompt('Time limit per question in seconds?', '20');
+        const questionTime = parseInt(questionTimeInput, 10) || 20;
+
+        const source = normalizeText(newTask.passage || newTask.description || newTask.title);
+        if (!source) {
+            window.alert('Please enter a passage, title, or description before generating questions.');
+            return;
+        }
+
+        const questions = Array.from({ length: questionCount }, (_, idx) => generateQuestionFromPassage(source, idx, questionTime));
+        setNewTask(prev => ({ ...prev, questions }));
     };
 
     const addManualQuestion = () => {
@@ -216,7 +299,42 @@ const TeacherTasks = () => {
                 </header>
 
                 <div className="space-y-6 max-w-5xl">
-                    {tasks.map((task) => (
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-6 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filter by Module</label>
+                                <select
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm font-bold text-gray-700"
+                                >
+                                    <option value="ALL">All Types</option>
+                                    <option value="READING">Reading</option>
+                                    <option value="LISTENING">Listening</option>
+                                    <option value="SPEAKING">Speaking</option>
+                                    <option value="WRITING">Writing</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filter by Difficulty</label>
+                                <select
+                                    value={filterDifficulty}
+                                    onChange={(e) => setFilterDifficulty(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm font-bold text-gray-700"
+                                >
+                                    <option value="ALL">All Levels</option>
+                                    <option value="BEGINNER">Beginner</option>
+                                    <option value="INTERMEDIATE">Intermediate</option>
+                                    <option value="ADVANCED">Advanced</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="text-sm text-gray-500 font-medium">
+                            Showing {filteredTasks.length} of {tasks.length} modules
+                        </div>
+                    </div>
+
+                    {filteredTasks.map((task) => (
                         <React.Fragment key={task.id}>
                             <motion.div
                                 key={task.id}
@@ -322,10 +440,10 @@ const TeacherTasks = () => {
                         </React.Fragment>
                     ))}
 
-                    {tasks.length === 0 && (
+                    {filteredTasks.length === 0 && (
                         <div className="py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-gray-100">
                             <Layers size={48} className="mx-auto text-gray-200 mb-4" />
-                            <p className="text-gray-400 font-bold uppercase tracking-widest">No curriculum modules assigned yet</p>
+                            <p className="text-gray-400 font-bold uppercase tracking-widest">No curriculum modules match your filters</p>
                         </div>
                     )}
                 </div>

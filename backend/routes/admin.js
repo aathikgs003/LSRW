@@ -5,25 +5,37 @@ const { authMiddleware, authorize } = require('../middleware/auth');
 
 // Get all organizations (Super Admin / Admin level)
 router.get('/organizations', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    console.log("GET /organizations hit");
     try {
-        // In a real multi-tenant app, only Super Admins might see ALL orgs.
-        // For this context, we return the list of organizations.
         const organizations = await prisma.organization.findMany({
             include: {
-                _count: {
-                    select: { users: true }
+                users: {
+                    select: { role: true }
+                },
+                subscriptions: {
+                    orderBy: { startDate: 'desc' },
+                    take: 1
                 }
             }
         });
 
         // Map data to match frontend expectations
-        const mappedOrgs = organizations.map(org => ({
-            id: org.id,
-            name: org.name,
-            students: org._count.users, // Simplified: total users in org
-            staff: 1, // Placeholder for staff count logic
-            status: "Active"
-        }));
+        const mappedOrgs = organizations.map(org => {
+            const staffCount = org.users.filter(u => u.role === 'TEACHER' || u.role === 'ADMIN').length;
+            const studentCount = org.users.filter(u => u.role === 'STUDENT').length;
+            const latestSubscription = org.subscriptions[0];
+
+            return {
+                id: org.id,
+                name: org.name,
+                subdomain: org.subdomain,
+                logoUrl: org.logoUrl,
+                students: studentCount,
+                staff: staffCount,
+                status: latestSubscription ? (latestSubscription.status === 'ACTIVE' ? 'Active' : 'Inactive') : 'Active',
+                license: latestSubscription ? latestSubscription.plan : 'Institutional'
+            };
+        });
 
         res.json(mappedOrgs);
     } catch (error) {
@@ -32,11 +44,106 @@ router.get('/organizations', authMiddleware, authorize(['ADMIN']), async (req, r
     }
 });
 
+// Create a new organization
+router.post('/organizations', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    const { name, subdomain, logoUrl, license } = req.body;
+    console.log("POST /organizations hit:", { name, subdomain });
+    
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Organization name is required' });
+    }
+
+    try {
+        const subdomainValue = subdomain || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        
+        const newOrg = await prisma.organization.create({
+            data: {
+                name,
+                subdomain: subdomainValue,
+                logoUrl,
+                subscriptions: {
+                    create: {
+                        plan: license || 'Institutional',
+                        status: 'ACTIVE'
+                    }
+                }
+            }
+        });
+        res.status(201).json(newOrg);
+    } catch (error) {
+        console.error("Create organization error:", error);
+        res.status(500).json({ error: 'Failed to create organization. Subdomain might be taken.' });
+    }
+});
+
+// Update an organization
+router.put('/organizations/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    const { name, subdomain, logoUrl, license, status } = req.body;
+    console.log(`PUT /organizations/${req.params.id} hit:`, { name, status });
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'Organization name is required' });
+    }
+    
+    try {
+        const updatedOrg = await prisma.$transaction(async (tx) => {
+            const org = await tx.organization.update({
+                where: { id: req.params.id },
+                data: { name, subdomain, logoUrl }
+            });
+
+            if (license || status) {
+                const latest = await tx.subscription.findFirst({
+                    where: { organizationId: req.params.id },
+                    orderBy: { startDate: 'desc' }
+                });
+
+                if (latest) {
+                    await tx.subscription.update({
+                        where: { id: latest.id },
+                        data: {
+                            plan: license || latest.plan,
+                            status: status ? (status === 'Active' ? 'ACTIVE' : 'INACTIVE') : latest.status
+                        }
+                    });
+                } else if (license || status) {
+                    await tx.subscription.create({
+                        data: {
+                            organizationId: req.params.id,
+                            plan: license || 'Institutional',
+                            status: status === 'Active' ? 'ACTIVE' : 'INACTIVE'
+                        }
+                    });
+                }
+            }
+            return org;
+        });
+
+        res.json(updatedOrg);
+    } catch (error) {
+        console.error("Update error:", error);
+        res.status(500).json({ error: 'Failed to update organization' });
+    }
+});
+
+// Delete an organization
+router.delete('/organizations/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
+    try {
+        await prisma.organization.delete({
+            where: { id: req.params.id }
+        });
+        res.json({ message: 'Organization deleted successfully' });
+    } catch (error) {
+        console.error("Delete organization error:", error);
+        res.status(500).json({ error: 'Could not delete organization. It might have active users or tasks associated with it.' });
+    }
+});
+
 // Get all users for administration
 router.get('/users', authMiddleware, authorize(['ADMIN']), async (req, res) => {
     try {
         const users = await prisma.user.findMany({
-            where: { organizationId: req.user.organizationId },
+            // Admin panel shows global users across organizations
             include: { organization: true }
         });
 
@@ -47,7 +154,9 @@ router.get('/users', authMiddleware, authorize(['ADMIN']), async (req, res) => {
             name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email.split('@')[0],
             email: u.email,
             role: u.role,
-            status: u.status
+            status: u.status,
+            organizationId: u.organizationId,
+            organizationName: u.role === 'ADMIN' ? 'GLOBAL' : (u.organization?.name || 'N/A')
         }));
 
         res.json(mappedUsers);
@@ -74,7 +183,7 @@ router.post('/users/invite', authMiddleware, authorize(['ADMIN']), async (req, r
                 lastName,
                 role: role || 'STUDENT',
                 organizationId: req.user.organizationId,
-                status: 'INVITED',
+                status: 'ACTIVE',
                 password: 'placeholder-password' // In a real app, send an invite link
             }
         });
@@ -90,6 +199,10 @@ router.post('/users/invite', authMiddleware, authorize(['ADMIN']), async (req, r
 router.patch('/users/:id/role', authMiddleware, authorize(['ADMIN']), async (req, res) => {
     const { role } = req.body;
     try {
+        if (!['STUDENT', 'TEACHER'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role. Only STUDENT or TEACHER are allowed.' });
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id: req.params.id },
             data: { role }
@@ -130,6 +243,10 @@ router.delete('/users/:id', authMiddleware, authorize(['ADMIN']), async (req, re
 router.put('/users/:id', authMiddleware, authorize(['ADMIN']), async (req, res) => {
     const { firstName, lastName, email, role } = req.body;
     try {
+        if (role && !['STUDENT', 'TEACHER'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role. Only STUDENT or TEACHER are allowed.' });
+        }
+
         // Validate email uniqueness if email is changed
         if (email) {
             const existingUser = await prisma.user.findFirst({

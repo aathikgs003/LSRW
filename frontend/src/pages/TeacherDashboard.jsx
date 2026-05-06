@@ -88,6 +88,7 @@ const TeacherDashboard = () => {
                 taskId: taskId
             });
             alert('Task assigned successfully!');
+            setAvailableTasks(prev => prev.filter((task) => task.id !== taskId));
             setIsAssigning(false);
         } catch (error) {
             console.error("Assignment error:", error);
@@ -98,10 +99,23 @@ const TeacherDashboard = () => {
     };
 
     const openAssignModal = async () => {
+        if (!selectedStudent) return;
         try {
             setIsAssigning(true);
-            const res = await api.get('/tasks');
-            setAvailableTasks(res.data);
+            const [tasksRes, assignedRes] = await Promise.all([
+                api.get('/tasks'),
+                api.get(`/attempts/student-attempts/${selectedStudent.id}`)
+            ]);
+
+            const assignedTaskIds = new Set(
+                (assignedRes.data || [])
+                    .filter(attempt => ['ASSIGNED', 'IN_PROGRESS'].includes(attempt.status))
+                    .map(attempt => attempt.taskId)
+            );
+
+            setAvailableTasks(
+                (tasksRes.data || []).filter((task) => !assignedTaskIds.has(task.id))
+            );
         } catch (error) {
             console.error("Fetch tasks error:", error);
         }

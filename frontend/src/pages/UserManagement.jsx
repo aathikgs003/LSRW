@@ -22,6 +22,8 @@ const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [organizationFilter, setOrganizationFilter] = useState('ALL');
+    const [roleFilter, setRoleFilter] = useState('ALL');
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteData, setInviteData] = useState({ email: '', firstName: '', lastName: '', role: 'STUDENT' });
     const [showEditModal, setShowEditModal] = useState(false);
@@ -43,12 +45,24 @@ const UserManagement = () => {
         fetchUsers();
     }, []);
 
+    const organizations = useMemo(() => {
+        const map = new Map();
+        users.forEach((u) => {
+            if (u.organizationId && !map.has(u.organizationId)) {
+                map.set(u.organizationId, u.organizationName || 'N/A');
+            }
+        });
+        return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    }, [users]);
+
     const filteredUsers = useMemo(() => {
         return users.filter(u =>
-            u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.email.toLowerCase().includes(searchQuery.toLowerCase())
+            (u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                u.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
+            (organizationFilter === 'ALL' || u.organizationId === organizationFilter || u.role === 'ADMIN') &&
+            (roleFilter === 'ALL' || u.role === roleFilter)
         );
-    }, [users, searchQuery]);
+    }, [users, searchQuery, organizationFilter, roleFilter]);
 
     const handleInvite = async (e) => {
         e.preventDefault();
@@ -84,15 +98,6 @@ const UserManagement = () => {
             fetchUsers();
         } catch (error) {
             alert('Failed to delete user');
-        }
-    };
-
-    const handleUpdateRole = async (id, newRole) => {
-        try {
-            await api.patch(`/admin/users/${id}/role`, { role: newRole });
-            fetchUsers();
-        } catch (error) {
-            alert('Failed to update role');
         }
     };
 
@@ -136,18 +141,42 @@ const UserManagement = () => {
                 </header>
 
                 <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
-                    <div className="p-8 border-b border-gray-50 flex justify-between items-center">
-                        <div className="relative w-96">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Filter by email or name..."
-                                className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary-100 transition font-medium"
-                            />
+                    <div className="p-8 border-b border-gray-50 flex justify-between items-center gap-6">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="relative w-96">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Filter by email or name..."
+                                    className="w-full pl-12 pr-6 py-3 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary-100 transition font-medium"
+                                />
+                            </div>
+
+                            <select
+                                value={organizationFilter}
+                                onChange={(e) => setOrganizationFilter(e.target.value)}
+                                className="px-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary-100 transition font-bold text-xs uppercase tracking-widest text-gray-600"
+                            >
+                                <option value="ALL">All Organizations</option>
+                                {organizations.map((org) => (
+                                    <option key={org.id} value={org.id}>{org.name}</option>
+                                ))}
+                            </select>
+
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                                className="px-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary-100 transition font-bold text-xs uppercase tracking-widest text-gray-600"
+                            >
+                                <option value="ALL">All Roles</option>
+                                <option value="TEACHER">Teacher</option>
+                                <option value="STUDENT">Student</option>
+                            </select>
                         </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-400 font-medium">
+
+                        <div className="flex items-center space-x-2 text-sm text-gray-400 font-medium whitespace-nowrap">
                             <Users size={16} />
                             <span>{filteredUsers.length} total users</span>
                         </div>
@@ -211,14 +240,6 @@ const UserManagement = () => {
                                                     <Edit2 size={18} />
                                                 </button>
                                             )}
-
-                                            <button
-                                                onClick={() => handleUpdateRole(u.id, u.role === 'ADMIN' ? 'TEACHER' : 'ADMIN')}
-                                                title={`Change to ${u.role === 'ADMIN' ? 'TEACHER' : 'ADMIN'}`}
-                                                className="p-2.5 bg-gray-50 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                                            >
-                                                <ShieldCheck size={18} />
-                                            </button>
 
                                             <button
                                                 onClick={() => handleToggleStatus(u.id, u.status)}

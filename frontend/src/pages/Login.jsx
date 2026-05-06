@@ -11,6 +11,13 @@ const Login = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const handleSignOut = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('organizationId');
+        navigate('/register', { replace: true });
+    };
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -64,88 +71,89 @@ const Login = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/50 p-12 border border-gray-100 relative overflow-hidden"
+                className="w-full max-w-5xl bg-white rounded-[2.5rem] shadow-xl shadow-gray-200/50 overflow-hidden relative"
             >
-                {/* Decorative element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50"></div>
-
-                <div className="text-center mb-10 relative z-10">
-                    <div className="text-4xl font-black gradient-text tracking-tighter mb-2">FluentPro</div>
-                    <p className="text-gray-400 font-bold text-sm tracking-tight uppercase">Intelligence Assessment Portal</p>
-                </div>
-
-                <AnimatePresence>
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mb-8 p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 flex items-start space-x-3 text-sm font-bold"
-                        >
-                            <AlertCircle size={18} className="flex-shrink-0" />
-                            <span>{error}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Authorized Email</label>
-                        <div className="relative group">
-                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold text-gray-700"
-                                placeholder="name@institution.edu"
-                                required
-                            />
+                <div className="md:flex">
+                    {/* Left: Image */}
+                    <div className="hidden md:flex md:w-1/2 items-center justify-center p-10 bg-gradient-to-br from-primary-600 to-indigo-400">
+                        <div className="w-full h-72 rounded-[1.5rem] bg-white/5 flex items-center justify-center text-white">
+                            <div className="text-center">
+                                <div className="text-2xl font-black">Welcome Back</div>
+                                <div className="text-sm opacity-90 mt-2">Sign in to continue</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-end px-4">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Security Pin</label>
-                            <a href="#" className="text-[10px] font-black text-primary-500 uppercase tracking-widest hover:underline">Reset Pass</a>
+                    {/* Right: Form */}
+                    <div className="w-full md:w-1/2 p-10">
+                        <div className="text-left mb-6">
+                            <div className="text-3xl font-black gradient-text tracking-tighter mb-1">NEC FluentPro</div>
+                            <p className="text-gray-400 font-medium text-sm">Intelligence Assessment Portal</p>
                         </div>
-                        <div className="relative group">
-                            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold text-gray-700"
-                                placeholder="••••••••"
-                                required
-                            />
-                        </div>
+
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 flex items-start space-x-3 text-sm font-bold"
+                                >
+                                    <AlertCircle size={18} className="flex-shrink-0" />
+                                    <span>{error}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Username</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                    <input
+                                        type="text"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium text-gray-700"
+                                        placeholder="Enter your username"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Password</label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium text-gray-700"
+                                        placeholder="Enter your password"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full inline-flex items-center justify-center py-3 bg-primary-600 text-white rounded-xl font-black text-lg hover:bg-primary-700 transition shadow-md disabled:opacity-60"
+                            >
+                                {loading ? (
+                                    <Loader2 className="animate-spin" size={20} />
+                                ) : (
+                                    <span className="flex items-center">Login <LogIn className="ml-2" size={18} /></span>
+                                )}
+                            </button>
+
+                            <div className="text-center text-sm text-gray-500">
+                                Continue without account{' '}
+                                <button onClick={handleSignOut} className="text-primary-600 font-black hover:underline ml-2">Sign Up</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <div className="flex items-center space-x-3 px-4 py-2">
-                        <input type="checkbox" className="w-5 h-5 rounded-lg border-2 border-gray-200 text-primary-600 focus:ring-primary-500 transition-all cursor-pointer" />
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Persist Session</span>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex items-center justify-center py-5 bg-gray-900 text-white rounded-[1.5rem] font-black text-xl hover:bg-black transition transform active:scale-[0.98] shadow-2xl shadow-gray-900/20 disabled:bg-gray-200 disabled:cursor-not-allowed"
-                    >
-                        {loading ? (
-                            <Loader2 className="animate-spin" size={24} />
-                        ) : (
-                            <span className="flex items-center">
-                                Connect to Portal <LogIn className="ml-3" size={22} />
-                            </span>
-                        )}
-                    </button>
-                </form>
-
-                <div className="text-center mt-12 bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                        New Researcher? <Link to="/register" className="text-primary-600 font-black hover:underline ml-2">Request Access</Link>
-                    </p>
                 </div>
             </motion.div>
         </div>

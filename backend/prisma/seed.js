@@ -10,7 +10,7 @@ async function main() {
         where: { subdomain: 'fluent' },
         update: {},
         create: {
-            name: 'FluentPro University',
+            name: 'NEC FluentPro University',
             subdomain: 'fluent',
         },
     });

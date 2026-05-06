@@ -67,7 +67,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center space-x-4">
                         <button className="flex items-center space-x-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl font-bold text-gray-600 hover:bg-gray-50 transition shadow-sm">
                             <Globe size={18} />
-                            <span>Instance: UK-East</span>
+                            <span>Instance: {stats.instanceName || 'N/A'}</span>
                         </button>
                         <button
                             onClick={navigateToCreate}
@@ -160,7 +160,7 @@ const AdminDashboard = () => {
                         </div>
 
                         <div className="mt-12 p-6 bg-primary-50 rounded-3xl border border-primary-100 italic text-sm text-primary-700 font-medium">
-                            "Platform-wide, Speaking remains the most challenging module for users this quarter."
+                            "{stats.insightMessage || 'Platform-wide insight is currently unavailable due to limited completed assessments.'}"
                         </div>
                     </div>
                 </div>

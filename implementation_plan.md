@@ -1,7 +1,7 @@
-# Implementation Plan - FluentPro AI LSRW Assessment Platform
+# Implementation Plan - NEC FluentPro AI LSRW Assessment Platform
 
 ## Overview
-FluentPro is a multi-tenant SaaS platform for Listening, Speaking, Reading, and Writing (LSRW) assessment. This plan outlines the transition from the current minimal state to the full MySQL-powered, multi-tenant architecture.
+NEC FluentPro is a multi-tenant SaaS platform for Listening, Speaking, Reading, and Writing (LSRW) assessment. This plan outlines the transition from the current minimal state to the full MySQL-powered, multi-tenant architecture.
 
 ## Phase 1: Foundation & Database Setup
 1. [ ] **Environment Setup**:

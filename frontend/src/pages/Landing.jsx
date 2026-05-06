@@ -8,7 +8,7 @@ const Landing = () => {
         <div className="bg-white min-h-screen">
             {/* Navbar */}
             <nav className="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
-                <div className="text-2xl font-bold gradient-text">FluentPro</div>
+                <div className="text-2xl font-bold gradient-text">NEC FluentPro</div>
                 <div className="space-x-8 text-gray-600 font-medium">
                     <a href="#features" className="hover:text-primary-600 transition">Features</a>
                     <a href="#about" className="hover:text-primary-600 transition">About</a>
@@ -31,15 +31,15 @@ const Landing = () => {
                             <span className="gradient-text">AI-Powered Precision</span>
                         </h1>
                         <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10">
-                            FluentPro is the ultimate SaaS platform for educational institutions to dynamically evaluate Listening, Speaking, Reading, and Writing skills using real-time AI analysis.
+                            NEC FluentPro is the ultimate SaaS platform for educational institutions to dynamically evaluate Listening, Speaking, Reading, and Writing skills using real-time AI analysis.
                         </p>
                         <div className="flex justify-center space-x-4">
                             <Link to="/register" className="flex items-center px-8 py-4 bg-primary-600 text-white rounded-xl text-lg font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition transform hover:-translate-y-1">
                                 Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
-                            <button className="px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl text-lg font-bold hover:bg-gray-50 transition">
-                                View Demo
-                            </button>
+                            <Link to="/login" className="px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl text-lg font-bold hover:bg-gray-50 transition flex items-center justify-center">
+                                Login
+                            </Link>
                         </div>
                     </motion.div>
                 </div>
@@ -79,8 +79,8 @@ const Landing = () => {
             {/* Footer */}
             <footer className="py-12 border-t border-gray-100">
                 <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
-                    <div className="text-xl font-bold gradient-text">FluentPro</div>
-                    <div className="text-gray-400 text-sm">© 2026 FluentPro AI. All rights reserved.</div>
+                    <div className="text-xl font-bold gradient-text">NEC FluentPro</div>
+                    <div className="text-gray-400 text-sm">© 2026 NEC FluentPro AI. All rights reserved.</div>
                 </div>
             </footer>
         </div>

@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import {
-    Search,
-    Loader2
-} from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 
-const TeacherStudents = () => {
+const TeacherMyStudents = () => {
     const [students, setStudents] = useState([]);
-    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [assignLoading, setAssignLoading] = useState(false);
-    const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const fetchStudents = async () => {
+    const fetchAssignedStudents = async () => {
         try {
             const res = await api.get('/dashboard/teacher');
-            const rawStudents = res.data.availableStudents || [];
-            const mapped = rawStudents.map(s => {
-                const avg = s.progressSummary ? Math.round((s.progressSummary.listeningAvg + s.progressSummary.speakingAvg + s.progressSummary.readingAvg + s.progressSummary.writingAvg) / 4) : 0;
+            const rawStudents = res.data.students || [];
+            const mapped = rawStudents.map((s) => {
+                const avg = s.progressSummary ?
+                    Math.round((s.progressSummary.listeningAvg + s.progressSummary.speakingAvg + s.progressSummary.readingAvg + s.progressSummary.writingAvg) / 4)
+                    : 0;
                 return {
                     id: s.id,
                     name: `${s.firstName || 'Student'} ${s.lastName || ''}`.trim(),
@@ -30,51 +27,23 @@ const TeacherStudents = () => {
                     status: avg > 80 ? 'EXCELS' : avg > 60 ? 'STABLE' : 'NEEDS FOCUS'
                 };
             });
-            const uniqueStudents = Array.from(new Map(mapped.map(student => [student.id, student])).values());
-            setStudents(uniqueStudents);
+            setStudents(mapped);
         } catch (error) {
-            console.error('Teacher student fetch error:', error);
-            setError('Unable to load available students.');
+            console.error('Failed to load assigned students:', error);
+            setError('Unable to load assigned students.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchStudents();
+        fetchAssignedStudents();
     }, []);
 
     const filteredStudents = students.filter((student) =>
         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    const toggleStudentSelection = (studentId) => {
-        setSelectedStudentIds((current) =>
-            current.includes(studentId)
-                ? current.filter((id) => id !== studentId)
-                : [...current, studentId]
-        );
-    };
-
-    const handleAssignSelected = async () => {
-        if (selectedStudentIds.length === 0) return;
-
-        setAssignLoading(true);
-        setError('');
-
-        try {
-            const res = await api.post('/dashboard/teacher/students/assign', { studentIds: selectedStudentIds });
-            if (res.data.assignedCount > 0) {
-                await fetchStudents();
-                setSelectedStudentIds([]);
-            }
-        } catch (err) {
-            setError(err.response?.data?.error || 'Failed to assign students.');
-        } finally {
-            setAssignLoading(false);
-        }
-    };
 
     if (loading) return (
         <div className="flex bg-gray-50 min-h-screen">
@@ -92,23 +61,16 @@ const TeacherStudents = () => {
             <main className="flex-1 p-10 overflow-y-auto">
                 <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-10">
                     <div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Select Students</h1>
-                        <p className="text-gray-500 font-medium">Choose students from your organization; assign them to yourself in bulk or one at a time.</p>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">My Students</h1>
+                        <p className="text-gray-500 font-medium">Students assigned to you from your organization.</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
                         <button
-                            onClick={() => navigate('/teacher/my-students')}
+                            onClick={() => navigate('/teacher/students')}
                             className="rounded-2xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
                         >
-                            View My Students
-                        </button>
-                        <button
-                            onClick={handleAssignSelected}
-                            disabled={selectedStudentIds.length === 0 || assignLoading}
-                            className="rounded-2xl bg-primary-600 px-6 py-3 text-sm font-bold text-white hover:bg-primary-700 transition disabled:cursor-not-allowed disabled:bg-gray-300"
-                        >
-                            {assignLoading ? 'Assigning...' : `Assign ${selectedStudentIds.length} Selected`}
+                            Assign More Students
                         </button>
                     </div>
                 </header>
@@ -124,9 +86,6 @@ const TeacherStudents = () => {
                             className="w-full pl-12 pr-6 py-3 bg-white border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition shadow-sm font-medium"
                         />
                     </div>
-                    <div className="text-sm text-gray-600">
-                        {selectedStudentIds.length > 0 ? `${selectedStudentIds.length} student(s) selected` : 'Select students to assign'}
-                    </div>
                 </div>
 
                 {error && (
@@ -139,18 +98,6 @@ const TeacherStudents = () => {
                     <table className="min-w-full text-left text-sm text-gray-700">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-4"><input
-                                    type="checkbox"
-                                    checked={selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0}
-                                    onChange={(e) => {
-                                        if (e.target.checked) {
-                                            setSelectedStudentIds(filteredStudents.map((student) => student.id));
-                                        } else {
-                                            setSelectedStudentIds([]);
-                                        }
-                                    }}
-                                    className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                /></th>
                                 <th className="px-6 py-4 font-black uppercase tracking-widest text-xs text-gray-400">Student</th>
                                 <th className="px-6 py-4 font-black uppercase tracking-widest text-xs text-gray-400">Email</th>
                                 <th className="px-6 py-4 font-black uppercase tracking-widest text-xs text-gray-400">Proficiency</th>
@@ -160,20 +107,12 @@ const TeacherStudents = () => {
                         <tbody className="divide-y divide-gray-100">
                             {filteredStudents.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-16 text-center text-gray-500 font-semibold">
-                                        No available students found.
+                                    <td colSpan="4" className="px-6 py-16 text-center text-gray-500 font-semibold">
+                                        No assigned students yet.
                                     </td>
                                 </tr>
                             ) : filteredStudents.map((student) => (
-                                <tr key={student.id} className={selectedStudentIds.includes(student.id) ? 'bg-primary-50' : ''}>
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedStudentIds.includes(student.id)}
-                                            onChange={() => toggleStudentSelection(student.id)}
-                                            className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                        />
-                                    </td>
+                                <tr key={student.id}>
                                     <td className="px-6 py-4 font-bold text-gray-900">{student.name}</td>
                                     <td className="px-6 py-4 text-gray-500">{student.email}</td>
                                     <td className="px-6 py-4 font-black text-gray-900">{student.score}%</td>
@@ -188,4 +127,4 @@ const TeacherStudents = () => {
     );
 };
 
-export default TeacherStudents;
+export default TeacherMyStudents;

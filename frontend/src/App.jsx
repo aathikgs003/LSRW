@@ -13,6 +13,7 @@ import UserManagement from './pages/UserManagement';
 import GlobalTasks from './pages/GlobalTasks';
 import SystemHealth from './pages/SystemHealth';
 import TeacherStudents from './pages/TeacherStudents';
+import TeacherMyStudents from './pages/TeacherMyStudents';
 import TeacherTasks from './pages/TeacherTasks';
 import TeacherPerformance from './pages/TeacherPerformance';
 
@@ -42,6 +43,7 @@ function App() {
           <Route path="/admin/health" element={<SystemHealth />} />
 
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/my-students" element={<TeacherMyStudents />} />
           <Route path="/teacher/students" element={<TeacherStudents />} />
           <Route path="/teacher/tasks" element={<TeacherTasks />} />
           <Route path="/teacher/performance" element={<TeacherPerformance />} />
@@ -56,6 +58,11 @@ function App() {
           <Route path="/listening" element={<ListeningTest />} />
           <Route path="/reading" element={<ReadingTest />} />
           <Route path="/writing" element={<WritingTest />} />
+
+          {/* Dynamic module routes for direct task links */}
+          <Route path="/listening-test/:id" element={<ListeningTest />} />
+          <Route path="/reading-test/:id" element={<ReadingTest />} />
+          <Route path="/writing-test/:id" element={<WritingTest />} />
         </Route>
       </Routes>
     </BrowserRouter>

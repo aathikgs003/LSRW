@@ -48,6 +48,10 @@ model User {
   password        String
   firstName       String?
   lastName        String?
+  bio             String?      @db.Text
+  location        String?
+  avatarUrl       String?
+  coverUrl        String?
   role            Role         @default(STUDENT)
   organization    Organization @relation(fields: [organizationId], references: [id])
   organizationId  String

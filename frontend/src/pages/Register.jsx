@@ -17,23 +17,33 @@ const Register = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            await api.post('/auth/register', formData);
-            navigate('/login');
+            const res = await api.post('/auth/register', formData);
+            const { token, user } = res.data;
+
+            if (token) localStorage.setItem('token', token);
+            if (user) {
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('organizationId', user.organizationId || formData.organizationId || '');
+            }
+
+            if (user?.role === 'ADMIN') navigate('/admin/dashboard');
+            else if (user?.role === 'TEACHER') navigate('/teacher/dashboard');
+            else navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.error || 'Registration failed. Check your data and network.');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     return (
@@ -45,147 +55,158 @@ const Register = () => {
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl shadow-gray-200/50 p-12 border border-gray-100 relative overflow-hidden"
+                className="w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 overflow-hidden relative"
             >
-                <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full -mr-24 -mt-24 blur-3xl opacity-50"></div>
-
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter mb-2">Initialize Account</h1>
-                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest leading-none">Access the FluentPro ecosystem</p>
-                </div>
-
-                <AnimatePresence>
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mb-10 p-5 bg-rose-50 text-rose-600 rounded-[1.5rem] border border-rose-100 flex items-start space-x-3 text-sm font-black"
-                        >
-                            <AlertCircle size={20} className="flex-shrink-0" />
-                            <span>{error}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Primary Name</label>
-                            <div className="relative group">
-                                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                                <input
-                                    type="text"
-                                    name="firstName"
-                                    value={formData.firstName}
-                                    onChange={handleChange}
-                                    className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold"
-                                    placeholder="Jane"
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Surname</label>
-                            <div className="relative group">
-                                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                                <input
-                                    type="text"
-                                    name="lastName"
-                                    value={formData.lastName}
-                                    onChange={handleChange}
-                                    className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold"
-                                    placeholder="Smith"
-                                    required
-                                />
+                <div className="md:flex">
+                    {/* Left decorative panel */}
+                    <div className="hidden md:flex md:w-1/2 items-center justify-center p-10 bg-gradient-to-br from-emerald-500 to-emerald-400">
+                        <div className="w-full h-72 rounded-[1.5rem] bg-white/5 flex items-center justify-center text-white">
+                            {/* Decorative placeholder — replace with an image in public/assets if desired */}
+                            <div className="text-center">
+                                <div className="text-2xl font-black">Welcome</div>
+                                <div className="text-sm opacity-90 mt-2">Start managing your learners</div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Institution Token</label>
-                            <div className="relative group">
-                                <Building className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                                <input
-                                    type="text"
-                                    name="organizationId"
-                                    value={formData.organizationId}
-                                    onChange={handleChange}
-                                    className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold"
-                                    placeholder="ORG-XXXXX"
-                                    required
-                                />
-                            </div>
+                    {/* Right: Form */}
+                    <div className="w-full md:w-1/2 p-10">
+                        <div className="text-left mb-6">
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tighter mb-1">Create Account</h1>
+                            <p className="text-gray-400 font-medium text-sm">Access the NEC FluentPro ecosystem</p>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Account Type</label>
-                            <div className="relative group">
-                                <ShieldCheck className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleChange}
-                                    className="w-full pl-14 pr-10 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-black uppercase text-xs tracking-widest appearance-none cursor-pointer"
+
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 flex items-start space-x-3 text-sm font-black"
                                 >
-                                    <option value="STUDENT">Academic Learner</option>
-                                    <option value="TEACHER">Instructional Lead</option>
-                                </select>
+                                    <AlertCircle size={20} className="flex-shrink-0" />
+                                    <span>{error}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">First Name</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleChange}
+                                            className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium"
+                                            placeholder="Jane"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Last Name</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleChange}
+                                            className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium"
+                                            placeholder="Smith"
+                                            required
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Organization ID / Subdomain</label>
+                                <div className="relative group">
+                                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                    <input
+                                        type="text"
+                                        name="organizationId"
+                                        value={formData.organizationId}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium"
+                                        placeholder="Org UUID or subdomain"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Account Type</label>
+                                    <div className="relative group">
+                                        <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                        <select
+                                            name="role"
+                                            value={formData.role}
+                                            onChange={handleChange}
+                                            className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-black uppercase text-xs tracking-widest appearance-none cursor-pointer"
+                                        >
+                                            <option value="STUDENT">Student</option>
+                                            <option value="TEACHER">Teacher</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Clg Mail</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium"
+                                        placeholder="name@institution.edu"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Password</label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={18} />
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all font-medium"
+                                        placeholder="Enter your password"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full inline-flex items-center justify-center py-3 bg-emerald-600 text-white rounded-xl font-black text-lg hover:bg-emerald-700 transition shadow-md disabled:opacity-60"
+                            >
+                                {loading ? (
+                                    <Loader2 className="animate-spin" size={20} />
+                                ) : (
+                                    <span className="flex items-center">Create Account <UserPlus className="ml-2" size={18} /></span>
+                                )}
+                            </button>
+
+                            <div className="text-center text-sm text-gray-500">
+                                Already Registered? <Link to="/login" className="text-primary-600 font-black hover:underline ml-1">Login</Link>
+                            </div>
+                        </form>
                     </div>
-
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Official Email</label>
-                        <div className="relative group">
-                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold"
-                                placeholder="name@institution.edu"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Access Key</label>
-                        <div className="relative group">
-                            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors" size={20} />
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                className="w-full pl-14 pr-6 py-5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-100 focus:bg-white transition-all font-bold"
-                                placeholder="Create security pin"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex items-center justify-center py-6 bg-gray-900 text-white rounded-[1.5rem] font-black text-xl hover:bg-black transition transform active:scale-[0.98] shadow-2xl shadow-gray-900/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    >
-                        {loading ? (
-                            <Loader2 className="animate-spin" size={28} />
-                        ) : (
-                            <span className="flex items-center">
-                                Request Portal Access <UserPlus className="ml-4" size={24} />
-                            </span>
-                        )}
-                    </button>
-                </form>
-
-                <div className="text-center mt-12 bg-gray-50 p-8 rounded-[2.5rem] border border-gray-50">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                        Already Registered? <Link to="/login" className="text-primary-600 font-black hover:underline ml-2">Secure Login</Link>
-                    </p>
                 </div>
             </motion.div>
         </div>

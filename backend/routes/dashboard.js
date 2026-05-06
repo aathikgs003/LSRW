@@ -6,18 +6,15 @@ const { authMiddleware, authorize } = require('../middleware/auth');
 // Admin Dashboard Stats
 router.get('/admin', authMiddleware, authorize(['ADMIN']), async (req, res) => {
     try {
-        const orgId = req.user.organizationId;
-
-        const totalStudents = await prisma.user.count({ where: { organizationId: orgId, role: 'STUDENT' } });
-        const totalTeachers = await prisma.user.count({ where: { organizationId: orgId, role: 'TEACHER' } });
-        const totalTasks = await prisma.task.count({ where: { organizationId: orgId } });
-        const totalAttempts = await prisma.attempt.count({
-            where: { user: { organizationId: orgId } }
-        });
+        // Keep Admin dashboard global so it aligns with OrganizationManagement totals.
+        const totalStudents = await prisma.user.count({ where: { role: 'STUDENT' } });
+        const totalTeachers = await prisma.user.count({ where: { role: { in: ['TEACHER', 'ADMIN'] } } });
+        const totalTasks = await prisma.task.count();
+        const totalAttempts = await prisma.attempt.count();
 
         // Skill-wise performance aggregated from attempts
         const attempts = await prisma.attempt.findMany({
-            where: { user: { organizationId: orgId }, status: 'COMPLETED' },
+            where: { status: 'COMPLETED' },
             include: { task: true }
         });
 
@@ -42,11 +39,16 @@ router.get('/admin', authMiddleware, authorize(['ADMIN']), async (req, res) => {
                 : 0
         }));
 
+        // Dynamic insight based on current weakest skill.
+        const weakestSkill = [...skillStats].sort((a, b) => a.score - b.score)[0];
+        const insightMessage = weakestSkill
+            ? `Platform-wide, ${weakestSkill.name} remains the most challenging module for users this quarter.`
+            : 'Platform-wide insight is currently unavailable due to limited completed assessments.';
+
         // Growth data (simplified: count users signed up by month in current year)
         const currentYear = new Date().getFullYear();
         const users = await prisma.user.findMany({
             where: {
-                organizationId: orgId,
                 role: 'STUDENT',
                 createdAt: { gte: new Date(`${currentYear}-01-01`) }
             },
@@ -74,7 +76,9 @@ router.get('/admin', authMiddleware, authorize(['ADMIN']), async (req, res) => {
             totalTasks,
             totalAttempts,
             skillStats,
-            growthData
+            growthData,
+            instanceName: 'GLOBAL',
+            insightMessage
         });
     } catch (error) {
         console.error(error);
@@ -87,8 +91,11 @@ router.get('/teacher', authMiddleware, authorize(['TEACHER']), async (req, res) 
     try {
         const teacherId = req.user.id;
 
-        const assignedStudents = await prisma.user.findMany({
-            where: { teacherId: teacherId },
+        const orgStudents = await prisma.user.findMany({
+            where: {
+                role: 'STUDENT',
+                organizationId: req.user.organizationId
+            },
             include: {
                 progressSummary: true,
                 attempts: {
@@ -98,6 +105,9 @@ router.get('/teacher', authMiddleware, authorize(['TEACHER']), async (req, res) 
                 }
             }
         });
+
+        const assignedStudents = orgStudents.filter(student => student.teacherId === teacherId);
+        const availableStudents = orgStudents.filter(student => !student.teacherId);
 
         const tasksAssigned = await prisma.task.count({
             where: { organizationId: req.user.organizationId }
@@ -112,12 +122,57 @@ router.get('/teacher', authMiddleware, authorize(['TEACHER']), async (req, res) 
         res.json({
             studentCount: assignedStudents.length,
             students: assignedStudents,
+            availableStudents,
+            totalOrgStudents: orgStudents.length,
             tasksAssigned,
             pendingReports
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch teacher dashboard stats' });
+    }
+});
+
+router.post('/teacher/students/assign', authMiddleware, authorize(['TEACHER']), async (req, res) => {
+    try {
+        const { studentIds } = req.body;
+        if (!Array.isArray(studentIds) || studentIds.length === 0) {
+            return res.status(400).json({ error: 'No students selected for assignment.' });
+        }
+
+        const uniqueStudentIds = [...new Set(studentIds)];
+        const eligibleStudents = await prisma.user.findMany({
+            where: {
+                id: { in: uniqueStudentIds },
+                role: 'STUDENT',
+                organizationId: req.user.organizationId,
+                teacherId: null
+            }
+        });
+
+        if (eligibleStudents.length === 0) {
+            return res.status(400).json({ error: 'No eligible students found to assign.' });
+        }
+
+        const result = await prisma.user.updateMany({
+            where: {
+                id: { in: eligibleStudents.map((student) => student.id) },
+                role: 'STUDENT',
+                organizationId: req.user.organizationId,
+                teacherId: null
+            },
+            data: {
+                teacherId: req.user.id
+            }
+        });
+
+        res.json({
+            assignedCount: result.count,
+            assignedIds: eligibleStudents.map((student) => student.id)
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to assign students.' });
     }
 });
 

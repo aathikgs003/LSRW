@@ -149,7 +149,9 @@ const Dashboard = () => {
                       {assignment.task?.type[0]}
                     </div>
                     <div>
-                      <div className="text-xs font-black text-primary-200 uppercase tracking-widest leading-none mb-1">Teacher Assigned</div>
+                      <div className="text-xs font-black text-primary-200 uppercase tracking-widest leading-none mb-1">
+                        {assignment.task?.createdByRole === 'ADMIN' ? 'Admin Assigned' : 'Teacher Assigned'}
+                      </div>
                       <h4 className="text-2xl font-black">{assignment.task?.title}</h4>
                     </div>
                   </div>

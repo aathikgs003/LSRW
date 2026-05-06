@@ -9,11 +9,22 @@ router.post('/register', async (req, res) => {
     const { email, password, firstName, lastName, role, organizationId } = req.body;
 
     try {
-        // Enforce organization check
+        // Enforce organization check: ensure organizationId exists and matches an existing Organization
         const orgId = organizationId || req.organization?.id;
         if (!orgId) {
             return res.status(400).json({ error: 'Organization ID is required.' });
         }
+
+        let org = await prisma.organization.findUnique({ where: { id: orgId } });
+        if (!org) {
+            org = await prisma.organization.findUnique({ where: { subdomain: orgId.toLowerCase() } });
+        }
+
+        if (!org) {
+            return res.status(400).json({ error: 'Invalid organization ID. Please use the Organization ID or registered organization name provided by your administrator.' });
+        }
+
+        const resolvedOrgId = org.id;
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -29,11 +40,32 @@ router.post('/register', async (req, res) => {
                 firstName,
                 lastName,
                 role: role || 'STUDENT',
-                organizationId: orgId
-            }
+                organizationId: resolvedOrgId
+            },
+            include: { organization: true }
         });
 
-        res.status(201).json({ message: 'User registered successfully', userId: user.id });
+        const token = jwt.sign(
+            { id: user.id, role: user.role, organizationId: user.organizationId },
+            process.env.JWT_SECRET || 'fallback_secret',
+            { expiresIn: '24h' }
+        );
+
+        res.status(201).json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                bio: user.bio,
+                location: user.location,
+                avatarUrl: user.avatarUrl,
+                coverUrl: user.coverUrl,
+                role: user.role,
+                organization: user.organization
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Registration failed' });
@@ -65,6 +97,12 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                bio: user.bio,
+                location: user.location,
+                avatarUrl: user.avatarUrl,
+                coverUrl: user.coverUrl,
                 role: user.role,
                 organization: user.organization
             }

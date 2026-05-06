@@ -31,7 +31,8 @@ const Sidebar = ({ role }) => {
 
     const teacherLinks = [
         { title: "Overview", icon: <LayoutDashboard />, link: "/teacher/dashboard" },
-        { title: "My Students", icon: <Users />, link: "/teacher/students" },
+        { title: "My Students", icon: <Users />, link: "/teacher/my-students" },
+        { title: "Assign Students", icon: <Layers />, link: "/teacher/students" },
         { title: "LSRW Tasks", icon: <BookOpen />, link: "/teacher/tasks" },
         { title: "Performance", icon: <BarChart />, link: "/teacher/performance" },
     ];
@@ -47,7 +48,7 @@ const Sidebar = ({ role }) => {
     return (
         <div className="w-72 bg-white border-r border-gray-100 flex flex-col h-screen sticky top-0">
             <div className="p-8">
-                <div className="text-3xl font-black gradient-text tracking-tighter mb-2">FluentPro</div>
+                <div className="text-3xl font-black gradient-text tracking-tighter mb-2">NEC FluentPro</div>
                 <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
                     <Shield size={10} className="text-primary-500" />
                     <span>AI Powered Assessment</span>
